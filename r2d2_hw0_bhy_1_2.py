@@ -14,7 +14,7 @@ from spherov2.types import Color
 
 from rpi_sensor import RPiCamera
 
-student_name = 'Steve Yoon, Ryoma Harris, Leontij Potupin, Renyi Qu'
+student_name = 'Byung Hui Yoon, Ryoma Harris, Leontij Potupin, Renyi Qu'
 
 # Part 2: Let's get rolling
 
