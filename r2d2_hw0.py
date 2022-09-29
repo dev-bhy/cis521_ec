@@ -14,7 +14,10 @@ from spherov2.types import Color
 
 from rpi_sensor import RPiCamera
 
-student_name = 'Type your full name here.'
+student_name = 'Byung Hui Yoon, Ryoma Harris, Leontij Potupin, Renyi Qu'
+
+is_tripod = True
+dome_angle = 0
 
 # Part 2: Let's get rolling
 
@@ -101,16 +104,21 @@ morse_code_dict = {
 
 # 1. Lists and For loops [5 points]
 def drive_with_commands(droid: SpheroEduAPI, roll_commands: List[Tuple[int, int, float]]):
-    ...  # TODO
+    for com in roll_commands:
+        SpheroEduAPI.roll(com[0], com[1], com[2])
 
 
 def sort_lambda(roll_commands: List[Tuple[int, int, float]]):
-    ...  # TODO
+    res = sorted(roll_commands, key=lambda x:(x[2], x[1], x[0]))
+    return res
 
 
 # 2. Functions (Drive Regular Polygon) [5 points]
 def drive_polygon(droid: SpheroEduAPI, n: int, speed: int = 100, duration: float = 1.5):
-    ...  # TODO
+    IntAngle = (n-2)*180/n
+    ExtAngle = 180 - IntAngle
+    for i in range(n):
+        drive_with_commands(droid, [(i*ExtAngle, speed, duration)])
 
 
 # 3. Dictionaries (RGB LED) [5 points]
@@ -121,59 +129,106 @@ def set_lights(droid: SpheroEduAPI, color: str, which_light='both'):
                         'back' - change back only,
                         'both' - change front and back
     """
-    ...  # TODO
+    # Turning on both lights of R2D2, using hex2rgb as helper function
+    droid.set_front_led(hex2rgb(color))
+    droid.set_back_led(hex2rgb(color))
 
 
 def hex2rgb(hex_code: str) -> Color:
     """convert HEX to RGB, one line"""
-    ...  # TODO
-
+    # If input is HEX, convert to RGB
+    if hex_code.startswith('#'):
+        h = hex_code.lstrip('#')
+        result = tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        return Color(result[0],result[1],result[2])
+    # If input is the English name of a color, return color from color dictionary
+    else:
+        return color_names_to_rgb[hex_code]
 
 # 4. Driving with the Keyboard Arrow Keys [5 points]
 def drive_with_keyboard(droid: SpheroEduAPI, speed_delta: int = 10, heading_delta: int = 30, dome_delta: int = 20):
     print('Press ESC key to exit...')
+    curr_speed = 0
+    curr_heading = 0
+
     while True:
         key = get_key()
         if key == 'esc':
             return
         elif key == 'up':
-            # TODO - finish all below
-            ...
+            droid.set_speed(curr_speed+speed_delta)
         elif key == 'down':
-            ...
+            droid.set_speed(max(0,curr_speed-speed_delta))
         elif key == 'left':
-            ...
+            droid.set_heading(curr_heading-heading_delta)
         elif key == 'right':
-            ...
+            droid.set_heading(curr_heading+heading_delta)
+        elif key == 'tab':
+            droid.set_dome_position(dome_delta)
+            dome_angle = dome_delta
+        elif key == 'return':
+            droid.set_dome_position(-dome_delta)
+            dome_angle = -dome_delta
+        elif key == 'space':
+            if is_tripod:
+                droid.set_stance(Stance.Bipod)
+                is_tripod = False
+            else:
+                droid.set_stance(Stance.Tripod)
+                is_tripod = True
 
 
 # 5. Sending a Message via Morse Code [5 points]
 def encode_in_morse_code(message: str) -> Iterator[str]:
-    ...  # TODO
+    LETTERS_TO_MC = {
+        'A': '.-', 'B': '-...', 'C': '-.-.',
+        'D': '-..', 'E': '.', 'F': '..-.',
+        'G': '--.', 'H': '....', 'I': '..',
+        'J': '.---', 'K': '-.-', 'L': '.-..',
+        'M': '--', 'N': '-.', 'O': '---',
+        'P': '.--.', 'Q': '--.-', 'R': '.-.',
+        'S': '...', 'T': '-', 'U': '..-',
+        'V': '...-', 'W': '.--', 'X': '-..-',
+        'Y': '-.--', 'Z': '--..',  '1': '.----',
+        '2': '..---', '3': '...--', '4': '....-',
+        '5': '.....', '6': '-....', '7': '--...',
+        '8': '---..', '9': '----.', '0': '-----'
+    }
+    for char in message.upper():
+        yield LETTERS_TO_MC[char]
 
 
 def blink(droid: SpheroEduAPI, duration: float):
-    ...  # TODO
+    droid.set_holo_project_led(255)
+    time.sleep(duration)
+    droid.set_holo_projector_led(0)
 
 
 def play_message(droid: SpheroEduAPI, message: str, dot_duration: float = 0.1, dash_duration: float = 0.3,
                  time_between_blips: float = 0.1, time_between_letters: float = 0.5):
-    ...  # TODO
+    for code in encode_in_morse_code(message):
+        for char in code:
+            if char == '.':
+                blink(droid,dot_duration)
+            elif char == '-':
+                blink(droid,dash_duration)
+            time.sleep(time_between_blips)
+        time.sleep(time_between_letters)
 
 
 # Part 3: Sensor Systems [10 points]
 def get_droid_info(droid: SpheroEduAPI) -> Dict[str, Any]:
     return {
         'velocity': droid.get_velocity(),
-        'location': ...,  # TODO - finish all below
-        'distance': ...,
-        'heading': ...,
-        'orientation': ...,
-        'acceleration': ...,
-        'dome': ...,
-        'gyroscope': ...,
-        'speed': ...,
-        'tripod': ...,
+        'location': droid.get_location(), # TODO - finish all below
+        'distance': droid.get_distance(),
+        'heading': droid.get_heading(),
+        'orientation': droid.get_orientation(),
+        'acceleration': droid.get_acceleration(),
+        'dome': dome_angle,
+        'gyroscope': droid.get_gyroscope(),
+        'speed': droid.get_speed(),
+        'tripod': is_tripod,
     }
 
 
@@ -275,7 +330,8 @@ def start_surveillance(droid: SpheroEduAPI):
 def main():
     # To test your function, write your test code below
     with SpheroEduAPI(scanner.find_toy()) as droid:
-        drive_with_keyboard(droid)
+        start_suveillance(droid)
+        # drive_with_keyboard(droid)
 
 
 if __name__ == '__main__':
